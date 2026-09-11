@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Señales de Phishing — Encuentra las parejas</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-panel: #151b26;
+    --border: #262f3d;
+    --text: #e8ecf1;
+    --text-dim: #8b96a5;
+    --accent: #e8590c;
+    --accent-dim: #7c2f0a;
+    --alert: #c0392b;
+    --success: #2f9e6e;
+    --success-dim: #163b2c;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 20px 48px;
+  }
+  header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--accent);
+    background: rgba(232, 89, 12, 0.12);
+    border: 1px solid var(--accent-dim);
+    padding: 3px 9px;
+    border-radius: 3px;
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-size: clamp(22px, 4vw, 30px);
+    line-height: 1.25;
+    margin: 0 0 6px;
+    font-weight: 650;
+  }
+  p.lede {
+    color: var(--text-dim);
+    font-size: 15px;
+    line-height: 1.55;
+    max-width: 62ch;
+    margin: 0 0 26px;
+  }
+  .status-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+  }
+  .progress-track {
+    flex: 1;
+    min-width: 160px;
+    height: 6px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.35s ease;
+  }
+  .status-text {
+    font-size: 13px;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .board {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 18px;
+  }
+  @media (max-width: 620px) {
+    .board { grid-template-columns: 1fr; }
+    .col-label { margin-top: 4px; }
+  }
+  .col-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin: 0 0 2px;
+    grid-column: span 1;
+  }
+  .card {
+    all: unset;
+    display: block;
+    cursor: pointer;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 15px 16px;
+    font-size: 14.5px;
+    line-height: 1.4;
+    color: var(--text);
+    transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+  }
+  .card:hover { border-color: #3a4655; }
+  .card:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .card.signal { font-weight: 600; }
+  .card.selected {
+    border-color: var(--accent);
+    background: rgba(232, 89, 12, 0.08);
+  }
+  .card.matched {
+    border-color: var(--success);
+    background: var(--success-dim);
+    color: #bfe6d3;
+    cursor: default;
+  }
+  .card.wrong {
+    border-color: var(--alert);
+    animation: shake 0.32s ease;
+  }
+  .card.hidden-visually {
+    opacity: 0.45;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+  .complete-banner {
+    display: none;
+    margin-top: 26px;
+    padding: 20px 22px;
+    background: var(--success-dim);
+    border: 1px solid var(--success);
+    border-radius: 8px;
+  }
+  .complete-banner.show { display: block; }
+  .complete-banner h2 {
+    margin: 0 0 6px;
+    font-size: 17px;
+    color: #d4f2e3;
+  }
+  .complete-banner p {
+    margin: 0 0 14px;
+    font-size: 14px;
+    color: #a9d9c1;
+    line-height: 1.5;
+  }
+  .restart-btn {
+    all: unset;
+    cursor: pointer;
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 5px;
+  }
+  .restart-btn:hover { background: #d24e0a; }
+  .restart-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  footer {
+    margin-top: 34px;
+    font-size: 12px;
+    color: #4d5766;
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <span class="tag">EJERCICIO</span>
+      <h1>Señales de phishing — encuentra las parejas</h1>
+    </div>
+  </header>
+  <p class="lede">
+    Une cada señal de alerta con lo que realmente debes revisar cuando la ves.
+    Selecciona una tarjeta de la izquierda y luego la que creas que le corresponde a la derecha.
+  </p>
+
+  <div class="status-bar">
+    <div class="progress-track">
+      <div class="progress-fill" id="progressFill"></div>
+    </div>
+    <span class="status-text" id="statusText">0 de 5 encontradas</span>
+  </div>
+
+  <div class="board" id="board">
+    <p class="col-label">Señal</p>
+    <p class="col-label">Qué revisar</p>
+  </div>
+
+  <div class="complete-banner" id="completeBanner">
+    <h2>Completado</h2>
+    <p id="completeText"></p>
+    <button class="restart-btn" id="restartBtn" type="button">Intentar de nuevo</button>
+  </div>
+
+  <footer>Ejercicio de práctica — capacitación de seguridad digital.</footer>
+</div>
+
+<script>
+  const pairs = [
+    {
+      id: "remitente",
+      signal: "Remitente sospechoso",
+      detail: "La dirección de correo completa detrás del nombre para mostrar, no el nombre en sí"
+    },
+    {
+      id: "urgencia",
+      signal: "Urgencia injustificada",
+      detail: "Una amenaza de plazo corto o una consecuencia grave si no actúas de inmediato"
+    },
+    {
+      id: "enlace",
+      signal: "Enlace engañoso",
+      detail: "La URL real detrás del enlace, que puede ser distinta al texto que ves"
+    },
+    {
+      id: "solicitud",
+      signal: "Solicitud fuera de lo normal",
+      detail: "Una petición de contraseñas, códigos o datos financieros por correo o chat"
+    },
+    {
+      id: "detalles",
+      signal: "Detalles inconsistentes",
+      detail: "Errores de ortografía, logos de baja calidad o un saludo genérico"
+    }
+  ];
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  const board = document.getElementById("board");
+  const progressFill = document.getElementById("progressFill");
+  const statusText = document.getElementById("statusText");
+  const completeBanner = document.getElementById("completeBanner");
+  const completeText = document.getElementById("completeText");
+  const restartBtn = document.getElementById("restartBtn");
+
+  let selectedSignal = null;
+  let selectedDetail = null;
+  let matchedCount = 0;
+  let attempts = 0;
+
+  function render() {
+    board.querySelectorAll(".card").forEach(el => el.remove());
+
+    const signals = shuffle(pairs);
+    const details = shuffle(pairs);
+
+    signals.forEach(p => {
+      const btn = document.createElement("button");
+      btn.className = "card signal";
+      btn.type = "button";
+      btn.textContent = p.signal;
+      btn.dataset.id = p.id;
+      btn.dataset.kind = "signal";
+      btn.addEventListener("click", onCardClick);
+      board.appendChild(btn);
+    });
+
+    details.forEach(p => {
+      const btn = document.createElement("button");
+      btn.className = "card detail";
+      btn.type = "button";
+      btn.textContent = p.detail;
+      btn.dataset.id = p.id;
+      btn.dataset.kind = "detail";
+      btn.addEventListener("click", onCardClick);
+      board.appendChild(btn);
+    });
+
+    // Interleave columns visually via CSS grid order isn't trivial with two independent
+    // shuffles in one grid, so we place signals then details but CSS grid-auto-flow
+    // handles the two-column layout row by row automatically since each type alternates.
+    reflow();
+  }
+
+  function reflow() {
+    // Re-order DOM so grid fills left column with signals, right with details, row by row.
+    const signalsEls = Array.from(board.querySelectorAll('[data-kind="signal"]'));
+    const detailEls = Array.from(board.querySelectorAll('[data-kind="detail"]'));
+    signalsEls.forEach((s, i) => {
+      board.appendChild(s);
+      if (detailEls[i]) board.appendChild(detailEls[i]);
+    });
+  }
+
+  function onCardClick(e) {
+    const el = e.currentTarget;
+    if (el.classList.contains("matched")) return;
+
+    const kind = el.dataset.kind;
+    if (kind === "signal") {
+      if (selectedSignal) selectedSignal.classList.remove("selected");
+      selectedSignal = el;
+      el.classList.add("selected");
+    } else {
+      if (selectedDetail) selectedDetail.classList.remove("selected");
+      selectedDetail = el;
+      el.classList.add("selected");
+    }
+
+    if (selectedSignal && selectedDetail) {
+      attempts++;
+      if (selectedSignal.dataset.id === selectedDetail.dataset.id) {
+        selectedSignal.classList.remove("selected");
+        selectedDetail.classList.remove("selected");
+        selectedSignal.classList.add("matched");
+        selectedDetail.classList.add("matched");
+        matchedCount++;
+        updateStatus();
+        selectedSignal = null;
+        selectedDetail = null;
+        if (matchedCount === pairs.length) showComplete();
+      } else {
+        selectedSignal.classList.add("wrong");
+        selectedDetail.classList.add("wrong");
+        const s = selectedSignal, d = selectedDetail;
+        setTimeout(() => {
+          s.classList.remove("selected", "wrong");
+          d.classList.remove("selected", "wrong");
+        }, 420);
+        selectedSignal = null;
+        selectedDetail = null;
+      }
+    }
+  }
+
+  function updateStatus() {
+    progressFill.style.width = (matchedCount / pairs.length * 100) + "%";
+    statusText.textContent = matchedCount + " de " + pairs.length + " encontradas";
+  }
+
+  function showComplete() {
+    const extra = attempts - pairs.length;
+    let msg = "Encontraste las 5 señales en " + attempts + (attempts === 1 ? " intento." : " intentos.");
+    if (extra <= 0) {
+      msg += " Sin errores — buen ojo.";
+    } else if (extra <= 2) {
+      msg += " Casi perfecto.";
+    } else {
+      msg += " Vale la pena repasar el módulo antes de seguir.";
+    }
+    completeText.textContent = msg;
+    completeBanner.classList.add("show");
+  }
+
+  restartBtn.addEventListener("click", () => {
+    matchedCount = 0;
+    attempts = 0;
+    selectedSignal = null;
+    selectedDetail = null;
+    completeBanner.classList.remove("show");
+    updateStatus();
+    render();
+  });
+
+  render();
+</script>
+</body>
+</html>
