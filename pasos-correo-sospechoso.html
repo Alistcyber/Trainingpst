@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Los 5 pasos — Flashcards y orden</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg-panel: #151b26;
+    --bg-panel-2: #1b2330;
+    --border: #262f3d;
+    --text: #e8ecf1;
+    --text-dim: #8b96a5;
+    --accent: #e8590c;
+    --accent-dim: #7c2f0a;
+    --alert: #c0392b;
+    --success: #2f9e6e;
+    --success-dim: #163b2c;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 56px; }
+  .tag {
+    display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.03em;
+    color: var(--accent); background: rgba(232, 89, 12, 0.12);
+    border: 1px solid var(--accent-dim); padding: 3px 9px; border-radius: 3px; margin-bottom: 10px;
+  }
+  h1 { font-size: clamp(22px, 4vw, 28px); margin: 0 0 6px; font-weight: 650; line-height: 1.25; }
+  h2 { font-size: 16px; font-weight: 650; margin: 0 0 4px; color: var(--text); }
+  p.lede { color: var(--text-dim); font-size: 15px; line-height: 1.55; max-width: 62ch; margin: 0 0 8px; }
+  section { margin-top: 38px; }
+  .section-head { margin-bottom: 16px; }
+  .section-head .sub { color: var(--text-dim); font-size: 13.5px; margin: 2px 0 0; }
+
+  /* Flashcards */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 14px;
+  }
+  .flashcard {
+    all: unset;
+    cursor: pointer;
+    perspective: 1000px;
+    height: 150px;
+    display: block;
+  }
+  .flashcard-inner {
+    position: relative;
+    width: 100%; height: 100%;
+    transition: transform 0.45s cubic-bezier(.4,.2,.2,1);
+    transform-style: preserve-3d;
+  }
+  .flashcard.flipped .flashcard-inner { transform: rotateY(180deg); }
+  .flashcard-face {
+    position: absolute; inset: 0;
+    backface-visibility: hidden;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 17px;
+    display: flex; flex-direction: column; justify-content: center;
+    background: var(--bg-panel);
+  }
+  .flashcard-face.front {
+    align-items: flex-start;
+  }
+  .step-num {
+    font-size: 12px; font-weight: 700; color: var(--accent);
+    letter-spacing: 0.04em; margin-bottom: 8px;
+  }
+  .step-title { font-size: 16.5px; font-weight: 650; line-height: 1.3; }
+  .flip-hint { margin-top: auto; font-size: 11.5px; color: var(--text-dim); padding-top: 8px; }
+  .flashcard-face.back {
+    transform: rotateY(180deg);
+    background: var(--bg-panel-2);
+    border-color: #3a4655;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: #cfd6e0;
+  }
+  .flashcard:focus-visible .flashcard-face { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Ordering game */
+  .order-area {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 680px) {
+    .order-area { grid-template-columns: 1fr; }
+  }
+  .pool, .sequence {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    min-height: 220px;
+  }
+  .col-title {
+    font-size: 11.5px; font-weight: 650; letter-spacing: 0.04em;
+    color: var(--text-dim); text-transform: uppercase; margin: 0 0 10px;
+  }
+  .tile {
+    all: unset;
+    cursor: pointer;
+    display: block;
+    width: 100%;
+    background: var(--bg-panel-2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 11px 13px;
+    font-size: 13.5px;
+    line-height: 1.4;
+    margin-bottom: 8px;
+    transition: border-color 0.15s ease, transform 0.1s ease;
+  }
+  .tile:hover { border-color: #3a4655; }
+  .tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tile.wrong { border-color: var(--alert); animation: shake 0.32s ease; }
+  .seq-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: var(--success-dim);
+    border: 1px solid var(--success);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: #bfe6d3;
+    margin-bottom: 8px;
+  }
+  .seq-badge {
+    flex: none;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--success);
+    color: #0d1117;
+    font-size: 11.5px;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .empty-note { color: var(--text-dim); font-size: 12.5px; font-style: italic; }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  .status-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px; flex-wrap: wrap; gap: 10px;
+  }
+  .status-text { font-size: 13px; color: var(--text-dim); }
+
+  .complete-banner {
+    display: none;
+    margin-top: 16px;
+    padding: 18px 20px;
+    background: var(--success-dim);
+    border: 1px solid var(--success);
+    border-radius: 8px;
+  }
+  .complete-banner.show { display: block; }
+  .complete-banner h3 { margin: 0 0 5px; font-size: 15.5px; color: #d4f2e3; }
+  .complete-banner p { margin: 0 0 12px; font-size: 13.5px; color: #a9d9c1; line-height: 1.5; }
+  .restart-btn {
+    all: unset; cursor: pointer; display: inline-block;
+    background: var(--accent); color: #fff; font-size: 13px; font-weight: 600;
+    padding: 8px 15px; border-radius: 5px;
+  }
+  .restart-btn:hover { background: #d24e0a; }
+  .restart-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+  footer {
+    margin-top: 40px; font-size: 12px; color: #4d5766;
+    border-top: 1px solid var(--border); padding-top: 14px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="tag">EJERCICIO</span>
+    <h1>Los 5 pasos ante un correo sospechoso</h1>
+    <p class="lede">Repasa cada paso con las flashcards y después pon a prueba si recuerdas el orden correcto.</p>
+  </header>
+
+  <section id="flashcardSection">
+    <div class="section-head">
+      <h2>1. Flashcards — toca cada tarjeta para ver el detalle</h2>
+      <p class="sub">Haz clic en cada una para voltearla.</p>
+    </div>
+    <div class="card-grid" id="cardGrid"></div>
+  </section>
+
+  <section id="orderSection">
+    <div class="section-head">
+      <h2>2. Ahora ordénalos — ¿en qué secuencia van?</h2>
+      <p class="sub">Haz clic en los pasos, de izquierda, en el orden correcto.</p>
+    </div>
+    <div class="status-row">
+      <span class="status-text" id="orderStatus">0 de 5 colocados</span>
+    </div>
+    <div class="order-area">
+      <div class="pool">
+        <p class="col-title">Pasos (desordenados)</p>
+        <div id="pool"></div>
+      </div>
+      <div class="sequence">
+        <p class="col-title">Tu secuencia</p>
+        <div id="sequence"></div>
+        <p class="empty-note" id="emptyNote">Aún no has colocado ningún paso.</p>
+      </div>
+    </div>
+    <div class="complete-banner" id="completeBanner">
+      <h3>Secuencia completa</h3>
+      <p id="completeText"></p>
+      <button class="restart-btn" id="restartBtn" type="button">Intentar de nuevo</button>
+    </div>
+  </section>
+
+  <footer>Ejercicio de práctica — capacitación de seguridad digital.</footer>
+</div>
+
+<script>
+  const steps = [
+    {
+      id: "no-clic",
+      title: "No hagas clic, no respondas, no reenvíes",
+      detail: "Ni al enlace, ni a un adjunto, ni contestando directamente al remitente sospechoso. Tampoco lo reenvíes a compañeros antes de reportarlo."
+    },
+    {
+      id: "no-eliminar",
+      title: "No elimines el correo",
+      detail: "Consérvalo completo, con encabezados incluidos — es la evidencia que el equipo de seguridad necesita para analizarlo."
+    },
+    {
+      id: "reportar",
+      title: "Repórtalo al canal oficial de tu empresa",
+      detail: "Reenvía el correo completo al canal de reporte de incidentes. Si no sabes por qué te generó duda, igual repórtalo — 'me pareció raro' es razón suficiente."
+    },
+    {
+      id: "espera",
+      title: "Espera y no actúes por tu cuenta",
+      detail: "No intentes verificarlo tú misma contactando al supuesto remitente por otro medio, ni tomes ninguna acción sin indicación. Reporta primero, actúa después si te lo piden."
+    },
+    {
+      id: "ya-actuaste",
+      title: "Si ya hiciste clic o compartiste algo, repórtalo igual",
+      detail: "De inmediato, sin esperar a ver si pasa algo. Un reporte tardío por vergüenza es mucho más costoso que el error original."
+    }
+  ];
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  // --- Flashcards ---
+  const cardGrid = document.getElementById("cardGrid");
+  steps.forEach((s, i) => {
+    const btn = document.createElement("button");
+    btn.className = "flashcard";
+    btn.type = "button";
+    btn.setAttribute("aria-label", "Voltear tarjeta: " + s.title);
+    btn.innerHTML = `
+      <div class="flashcard-inner">
+        <div class="flashcard-face front">
+          <div class="step-num">PASO ${i + 1}</div>
+          <div class="step-title">${s.title}</div>
+          <div class="flip-hint">Toca para ver el detalle →</div>
+        </div>
+        <div class="flashcard-face back">${s.detail}</div>
+      </div>
+    `;
+    btn.addEventListener("click", () => btn.classList.toggle("flipped"));
+    cardGrid.appendChild(btn);
+  });
+
+  // --- Ordering game ---
+  const pool = document.getElementById("pool");
+  const sequence = document.getElementById("sequence");
+  const orderStatus = document.getElementById("orderStatus");
+  const emptyNote = document.getElementById("emptyNote");
+  const completeBanner = document.getElementById("completeBanner");
+  const completeText = document.getElementById("completeText");
+  const restartBtn = document.getElementById("restartBtn");
+
+  let placed = 0;
+  let wrongClicks = 0;
+  let order = [];
+
+  function renderPool() {
+    pool.innerHTML = "";
+    order.forEach(s => {
+      const btn = document.createElement("button");
+      btn.className = "tile";
+      btn.type = "button";
+      btn.textContent = s.title;
+      btn.dataset.id = s.id;
+      btn.addEventListener("click", onTileClick);
+      pool.appendChild(btn);
+    });
+  }
+
+  function onTileClick(e) {
+    const el = e.currentTarget;
+    const clickedId = el.dataset.id;
+    const expectedId = steps[placed].id;
+
+    if (clickedId === expectedId) {
+      el.remove();
+      const item = document.createElement("div");
+      item.className = "seq-item";
+      item.innerHTML = `<span class="seq-badge">${placed + 1}</span><span>${steps[placed].title}</span>`;
+      sequence.appendChild(item);
+      placed++;
+      emptyNote.style.display = "none";
+      updateStatus();
+      if (placed === steps.length) showComplete();
+    } else {
+      el.classList.add("wrong");
+      setTimeout(() => el.classList.remove("wrong"), 320);
+      wrongClicks++;
+    }
+  }
+
+  function updateStatus() {
+    orderStatus.textContent = placed + " de " + steps.length + " colocados";
+  }
+
+  function showComplete() {
+    let msg = "Colocaste los 5 pasos en el orden correcto";
+    if (wrongClicks === 0) {
+      msg += ", sin ningún error. Excelente.";
+    } else {
+      msg += ", con " + wrongClicks + (wrongClicks === 1 ? " intento fallido." : " intentos fallidos.") + " Vale la pena repasar las flashcards de arriba antes de seguir.";
+    }
+    completeText.textContent = msg;
+    completeBanner.classList.add("show");
+  }
+
+  function resetGame() {
+    placed = 0;
+    wrongClicks = 0;
+    order = shuffle(steps);
+    sequence.innerHTML = "";
+    emptyNote.style.display = "block";
+    completeBanner.classList.remove("show");
+    updateStatus();
+    renderPool();
+  }
+
+  restartBtn.addEventListener("click", resetGame);
+
+  resetGame();
+</script>
+</body>
+</html>
